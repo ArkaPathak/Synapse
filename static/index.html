@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Synapse — Incident Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="service-cafe-header">
+  <div class="sc-left">
+    <div class="sc-logo">ServiceCafe</div>
+    <div class="sc-search-bar">
+      <input type="search" id="global-search-input" placeholder="Search incidents, requests, knowledge...">
+    </div>
+  </div>
+  <div class="sc-right">
+    <div class="sc-user">Arka Pathak</div>
+  </div>
+</header>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">&#9670;</span>
+      <div>
+        <span class="brand-name">Synapse</span>
+        <div class="brand-subcaption">The Enterprise Memory Layer for McDonald's Production Support</div>
+      </div>
+    </div>
+
+    <nav class="nav" aria-label="Primary">
+      <button class="nav-item is-active" data-view="queue">
+        <span class="nav-dot"></span> Incident Queue
+      </button>
+      <button class="nav-item" data-view="history">
+        <span class="nav-dot"></span> Knowledge Base
+      </button>
+      <button class="nav-item" data-view="new-incident">
+        <span class="nav-dot"></span> New Incident
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="kb-mini" id="kb-mini">Knowledge base: —</div>
+      <div class="badge-prototype">Prototype &middot; synthetic data</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <div class="topbar-eyebrow" id="topbar-eyebrow">Production Support</div>
+        <h1 class="topbar-title" id="topbar-title">Incident Queue</h1>
+      </div>
+      <div class="topbar-status" id="topbar-status"></div>
+    </header>
+
+    <!-- Queue view -->
+    <section class="content" id="view-queue">
+      <div class="pattern-banner" id="pattern-banner" hidden></div>
+
+      <div class="table-card">
+        <table class="incident-table">
+          <thead>
+            <tr>
+              <th>Number</th>
+              <th>Short description</th>
+              <th>Priority</th>
+              <th>State</th>
+              <th>Assignment group</th>
+              <th>Opened</th>
+            </tr>
+          </thead>
+          <tbody id="queue-body"></tbody>
+        </table>
+        <div class="empty-state" id="queue-empty" hidden>No active incidents right now.</div>
+      </div>
+    </section>
+
+    <!-- History / Knowledge base view -->
+    <section class="content" id="view-history" hidden>
+      <p class="section-note">Every one of these is a resolved incident Synapse can recall instantly the next time something similar happens — on this team or any other.</p>
+      <div class="table-card">
+        <table class="incident-table">
+          <thead>
+            <tr>
+              <th>Number</th>
+              <th>Short description</th>
+              <th>Category</th>
+              <th>Resolved by</th>
+              <th>Resolved</th>
+            </tr>
+          </thead>
+          <tbody id="history-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Detail view -->
+    <section class="content" id="view-detail" hidden>
+      <button class="back-link" id="back-to-queue">&larr; Back to queue</button>
+      <div id="sla-countdown-container"></div>
+      <div id="detail-card"></div>
+    </section>
+
+    <!-- Search Results view -->
+    <section class="content" id="view-search-results" hidden>
+      <div class="table-card">
+        <table class="incident-table">
+          <thead>
+            <tr>
+              <th>Number</th>
+              <th>Short description</th>
+              <th>State</th>
+            </tr>
+          </thead>
+          <tbody id="search-results-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- New Incident view -->
+    <section class="content" id="view-new-incident" hidden>
+      <div class="resolve-card">
+        <div class="resolve-title">Create a new incident</div>
+        <div class="form-grid">
+          <label for="new-priority">Priority</label>
+          <select id="new-priority">
+            <option>P1</option>
+            <option selected>P2</option>
+            <option>P3</option>
+            <option>P4</option>
+          </select>
+
+          <label for="new-assignment-group">Assignment group</label>
+          <select id="new-assignment-group">
+            <option>Loading...</option>
+          </select>
+
+          <label for="new-category">Category</label>
+          <select id="new-category">
+            <option>Loading...</option>
+          </select>
+
+          <label for="new-short-description" class="field-full-width">Short description</label>
+          <input id="new-short-description" type="text" placeholder="e.g., ETL job failing" class="field-full-width">
+
+          <label for="new-description" class="field-full-width">Description</label>
+          <textarea id="new-description" rows="4" placeholder="Provide a detailed description of the issue..." class="field-full-width"></textarea>
+        </div>
+
+        <button class="resolve-button" id="create-incident-btn">Create Incident</button>
+        <div id="create-outcome"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
