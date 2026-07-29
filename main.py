@@ -13,7 +13,7 @@ pointing Synapse at a real ServiceNow instance later is a data-source
 swap, not a redesign.
 """
 import json
-import os
+import os, collections
 from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timedelta, timezone
 
@@ -128,6 +128,66 @@ def get_queue():
 def get_history():
     closed = [i for i in state["incidents"] if i["state"] not in ACTIVE_STATES]
     return sorted(closed, key=lambda i: i["resolved_at"] or "", reverse=True)
+
+
+@app.get("/api/dashboard-stats")
+def get_dashboard_stats():
+    """Return aggregated statistics for the dashboard."""
+    total_incidents = len(state["incidents"])
+    active_incidents = len([i for i in state["incidents"] if i["state"] in ACTIVE_STATES])
+    resolved_incidents = len([i for i in state["incidents"] if i["state"] not in ACTIVE_STATES])
+
+    incidents_by_priority = collections.defaultdict(int)
+    incidents_by_category = collections.defaultdict(int)
+    incidents_by_assignment_group = collections.defaultdict(int)
+    sla_met_count = 0
+    sla_breached_count = 0
+    monthly_incident_trend = collections.defaultdict(int)
+
+    now = datetime.now(timezone.utc)
+    for incident in state["incidents"]:
+        incidents_by_priority[incident["priority"]] += 1
+        incidents_by_category[incident["category"]] += 1
+        incidents_by_assignment_group[incident["assignment_group"]] += 1
+
+        opened_date = datetime.fromisoformat(incident["opened_at"].replace("Z", "+00:00"))
+        # Only track for the last 12 months
+        if (now - opened_date).days < 365:
+            month_year = opened_date.strftime("%Y-%m")
+            monthly_incident_trend[month_year] += 1
+
+        if incident["state"] not in ACTIVE_STATES and incident.get("sla_due") and incident.get("resolved_at"):
+            sla_due = datetime.fromisoformat(incident["sla_due"].replace("Z", "+00:00"))
+            resolved_at = datetime.fromisoformat(incident["resolved_at"].replace("Z", "+00:00"))
+            if resolved_at <= sla_due:
+                sla_met_count += 1
+            else:
+                sla_breached_count += 1
+
+    total_sla_incidents = sla_met_count + sla_breached_count
+    sla_met_percentage = (sla_met_count / total_sla_incidents * 100) if total_sla_incidents > 0 else 100
+
+    # Sort and take top 5 for categories and groups
+    top_categories = dict(sorted(incidents_by_category.items(), key=lambda item: item[1], reverse=True)[:5])
+    top_groups = dict(sorted(incidents_by_assignment_group.items(), key=lambda item: item[1], reverse=True)[:5])
+
+    # Ensure all 12 months are present for trend, even if 0 incidents
+    monthly_trend_full = {}
+    for i in range(12):
+        date = now - timedelta(days=30 * (11 - i)) # Approx. 11 months back
+        month_year = date.strftime("%Y-%m")
+        monthly_trend_full[month_year] = monthly_incident_trend.get(month_year, 0)
+
+    return {
+        "total_incidents": total_incidents,
+        "active_incidents": active_incidents,
+        "resolved_incidents": resolved_incidents,
+        "sla_met_percentage": round(sla_met_percentage, 1),
+        "incidents_by_priority": incidents_by_priority,
+        "incidents_by_category": top_categories,
+        "incidents_by_assignment_group": top_groups,
+        "monthly_incident_trend": monthly_trend_full,
+    }
 
 
 @app.get("/api/meta/form-options")

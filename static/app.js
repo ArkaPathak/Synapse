@@ -7,6 +7,7 @@ const els = {
     history: document.getElementById("view-history"),
     detail: document.getElementById("view-detail"),
     searchResults: document.getElementById("view-search-results"),
+    dashboard: document.getElementById("view-dashboard"),
     "new-incident": document.getElementById("view-new-incident"),
   },
   topbarEyebrow: document.getElementById("topbar-eyebrow"),
@@ -22,10 +23,22 @@ const els = {
   backToQueue: document.getElementById("back-to-queue"),
   globalSearchInput: document.getElementById("global-search-input"),
   searchResultsBody: document.getElementById("search-results-body"),
+  dashboardTotalIncidents: document.getElementById("dashboard-total-incidents"),
+  dashboardActiveIncidents: document.getElementById("dashboard-active-incidents"),
+  dashboardResolvedIncidents: document.getElementById("dashboard-resolved-incidents"),
+  dashboardSlaMet: document.getElementById("dashboard-sla-met"),
+  dashboardPriorityChart: document.getElementById("dashboard-priority-chart")?.getContext("2d"),
+  dashboardCategoryChart: document.getElementById("dashboard-category-chart")?.getContext("2d"),
+  dashboardGroupChart: document.getElementById("dashboard-group-chart")?.getContext("2d"),
+  dashboardLoading: document.getElementById("dashboard-loading"),
+  dashboardError: document.getElementById("dashboard-error"),
 };
 
 let slaInterval = null;
 let lastListView = "queue";
+
+// To store chart instances and destroy them before re-rendering
+const chartInstances = {};
 
 function fmtDate(iso) {
   if (!iso) return "—";
@@ -82,6 +95,10 @@ function showView(name) {
     els.topbarEyebrow.textContent = "Service Desk";
     els.topbarTitle.textContent = "Create New Incident";
     prepareNewIncidentForm();
+  } else if (name === "dashboard") {
+    els.topbarEyebrow.textContent = "Leadership Overview";
+    els.topbarTitle.textContent = "Incident Dashboard";
+    loadDashboard();
   }
 }
 
@@ -484,6 +501,94 @@ async function performSearch() {
 }
 
 els.globalSearchInput.addEventListener("search", performSearch);
+
+// ---------- dashboard view ----------
+
+const MCD_RED = "#da291c";
+const MCD_YELLOW = "#ffc72c";
+const CHART_COLORS = [MCD_RED, MCD_YELLOW, "#3d3d3d", "#6b7280", "#9ca3af"];
+
+async function loadDashboard() {
+  els.dashboardLoading.hidden = false;
+  els.dashboardError.hidden = true;
+  try {
+    const data = await getJSON(`${API}/dashboard-stats`);
+    els.dashboardLoading.hidden = true;
+
+    els.dashboardTotalIncidents.textContent = data.total_incidents;
+    els.dashboardActiveIncidents.textContent = data.active_incidents; els.dashboardActiveIncidents.classList.add("mcd-red");
+    els.dashboardResolvedIncidents.textContent = data.resolved_incidents;
+    els.dashboardSlaMet.textContent = `${data.sla_met_percentage}%`;
+
+    renderPieChart(els.dashboardPriorityChart, 'dashboard-priority-chart', "Incidents by Priority", data.incidents_by_priority);
+    renderVerticalBarChart(els.dashboardCategoryChart, 'dashboard-category-chart', "Incidents by Category", data.incidents_by_category);
+    renderVerticalBarChart(els.dashboardGroupChart, 'dashboard-group-chart', "Incidents by Assignment Group", data.incidents_by_assignment_group);
+
+  } catch (e) {
+    els.dashboardLoading.hidden = true;
+    els.dashboardError.textContent = `Couldn't load dashboard data: ${e.message}`;
+    els.dashboardError.hidden = false;
+  }
+}
+
+function renderPieChart(ctx, chartId, title, data) {
+  if (chartInstances[chartId]) {
+    chartInstances[chartId].destroy();
+  }
+  chartInstances[chartId] = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: Object.keys(data),
+      datasets: [{
+        label: title,
+        data: Object.values(data),
+        backgroundColor: CHART_COLORS,
+        borderColor: '#fff',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+        },
+      }
+    }
+  });
+}
+
+function renderVerticalBarChart(ctx, chartId, title, data) {
+  if (chartInstances[chartId]) {
+    chartInstances[chartId].destroy();
+  }
+  chartInstances[chartId] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(data),
+      datasets: [{
+        label: title,
+        data: Object.values(data),
+        backgroundColor: MCD_RED,
+        borderColor: MCD_YELLOW,
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false,
+        },
+      },
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+}
 
 // ---------- init ----------
 
